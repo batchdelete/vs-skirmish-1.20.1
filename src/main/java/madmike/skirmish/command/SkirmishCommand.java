@@ -1,4 +1,4 @@
-package com.madmike.command;
+package madmike.skirmish.command;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;

@@ -1,6 +1,7 @@
-package com.madmike;
+package madmike.skirmish;
 
-import com.madmike.command.SkirmishCommand;
+import madmike.skirmish.command.SkirmishCommand;
+import madmike.skirmish.events.SkirmishEvents;
 import net.fabricmc.api.ModInitializer;
 
 import org.slf4j.Logger;
@@ -17,6 +18,8 @@ public class VSSkirmish implements ModInitializer {
 		LOGGER.info("VS Skirmish init");
 
 		SkirmishCommand.register();
+
+		SkirmishEvents.register();
 
 		LOGGER.info("VS Skirmish done");
 	}

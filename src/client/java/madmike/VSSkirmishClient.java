@@ -1,4 +1,4 @@
-package com.madmike;
+package madmike;
 
 import net.fabricmc.api.ClientModInitializer;
 
