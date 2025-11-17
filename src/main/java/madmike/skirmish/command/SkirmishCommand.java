@@ -11,6 +11,8 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import org.valkyrienskies.core.api.ships.Ship;
+import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import xaero.pac.common.server.api.OpenPACServerAPI;
 import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
 import xaero.pac.common.server.parties.party.api.IServerPartyAPI;
@@ -139,7 +141,17 @@ public class SkirmishCommand {
                         // TODO: Display leaderboard (most wins, ships sunk, gold earned)
                         player.sendMessage(Text.literal("§6[Skirmish Top] §7Leaderboard coming soon..."));
                         return 1;
+                    }))
+
+
+                    .then(literal("save").executes(ctx -> {
+                        ServerPlayerEntity player = ctx.getSource().getPlayer();
+                        // TODO: save a ship to nbt
+                        player.sendMessage(Text.literal("§6[Skirmish Top] §7Leaderboard coming soon..."));
+                        return 1;
                     }));
+
+
 
             dispatcher.register(skirmishCommand);
 
@@ -155,7 +167,7 @@ public class SkirmishCommand {
         }
 
         if (SkirmishManager.INSTANCE.hasChallengeOrSkirmish()) {
-            player.sendMessage(Text.literal("There is already a skirmish or challenge, please try again later."));
+            player.sendMessage(Text.literal("There is already a skirmish or pending challenge, please try again later."));
             return 0;
         }
 
@@ -163,11 +175,28 @@ public class SkirmishCommand {
         OpenPACServerAPI api = OpenPACServerAPI.get(server);
 
         IPartyManagerAPI pm = api.getPartyManager();
-        IPlayerConfigManagerAPI pc = api.getPlayerConfigs();
+
+        IServerPartyAPI party = pm.getPartyByOwner(player.getUuid());
+        if (party == null) {
+            player.sendMessage(Text.literal("You must be a party leader to use this command"));
+            return 0;
+        }
+
+        Ship ship = VSGameUtilsKt.getShipManaging(player);
+
+        
+
+
+        VLibGameUtils.INSTANCE.getStructureTemplate(party.getId(), );
+
+
+
 
         IServerPartyAPI otherParty = null;
 
         String teamName = StringArgumentType.getString(ctx, "team");
+
+        IPlayerConfigManagerAPI pc = api.getPlayerConfigs();
 
         Set<UUID> ownerIds = new HashSet<>();
         pm.getAllStream().forEach(t -> ownerIds.add(t.getOwner().getUUID()));
@@ -188,7 +217,7 @@ public class SkirmishCommand {
 
         VLibGameUtils.INSTANCE.saveShipToTemplate();
 
-        VLibGameUtils.INSTANCE.getStructureTemplate()
+
 
         // TODO: Validate leader status, ensure on ship, create challenge
         player.sendMessage(Text.literal("§eChallenging team §6" + teamName + "§e to a skirmish..."));
