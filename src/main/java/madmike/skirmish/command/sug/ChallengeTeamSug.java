@@ -1,4 +1,4 @@
-package madmike.skirmish.command;
+package madmike.skirmish.command.sug;
 
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -14,7 +14,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-public class Suggester {
+public class ChallengeTeamSug {
     public static CompletableFuture<Suggestions> sugChallengeTeam(CommandContext<ServerCommandSource> src, SuggestionsBuilder builder) {
         Set<UUID> ownerIds = new HashSet<>();
         MinecraftServer server = src.getSource().getServer();

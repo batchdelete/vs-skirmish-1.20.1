@@ -22,7 +22,7 @@
 			"madmike.VSSkirmishClient"
 		],
 		"cardinal-components-scoreboard": [
-			"madmike.skirmish.components.SkirmishComponents"
+			"madmike.skirmish.component.SkirmishComponents"
 		]
 	},
 	"mixins": [

@@ -5,10 +5,10 @@ import dev.onyxstudios.cca.api.v3.component.ComponentRegistryV3;
 import dev.onyxstudios.cca.api.v3.scoreboard.ScoreboardComponentFactoryRegistry;
 import dev.onyxstudios.cca.api.v3.scoreboard.ScoreboardComponentInitializer;
 import madmike.skirmish.VSSkirmish;
-import madmike.skirmish.component.components.NamesComponent;
-import madmike.skirmish.component.components.RefundComponent;
-import madmike.skirmish.component.components.ReturnPointComponent;
-import madmike.skirmish.component.components.StatsComponent;
+import madmike.skirmish.component.components.scoreboard.NamesComponent;
+import madmike.skirmish.component.components.scoreboard.RefundComponent;
+import madmike.skirmish.component.components.scoreboard.ReturnPointComponent;
+import madmike.skirmish.component.components.scoreboard.StatsComponent;
 import net.minecraft.util.Identifier;
 
 public class SkirmishComponents implements ScoreboardComponentInitializer {

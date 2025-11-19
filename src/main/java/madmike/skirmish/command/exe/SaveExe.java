@@ -32,7 +32,7 @@ public class SaveExe {
         // Get the ship the player is currently on
         Ship ship = VSGameUtilsKt.getShipManagingPos(world, player.getBlockPos());
         if (ship == null) {
-            player.sendMessage(Text.literal("§cYou are not standing on a ship."), false);
+            player.sendMessage(Text.literal("§cYou are not standing on a ship or there was an error saving it"), false);
             return 0;
         }
 

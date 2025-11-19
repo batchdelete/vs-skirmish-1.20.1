@@ -35,6 +35,8 @@ repositories {
 		name = "Valkyrien Skies"
 		url = "https://maven.valkyrienskies.org"
 	}
+
+	maven { url = "https://maven.terraformersmc.com/releases" }
 }
 
 loom {
@@ -82,6 +84,12 @@ dependencies {
 	implementation("org.valkyrienskies.core:util:${vscore_version}") {
 		exclude group: 'org.joml', module: ''
 	}
+
+	modImplementation("maven.modrinth:eureka:sXx5EPib")
+
+	modImplementation "dev.emi:trinkets:3.7.2"
+
+	modImplementation "maven.modrinth:rlloIFEV:PaHAEoCa"
 
 
 	modImplementation("com.electronwill.night-config:toml:3.6.7")

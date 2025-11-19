@@ -2,6 +2,10 @@ package madmike.skirmish.logic;
 
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import xaero.pac.common.server.api.OpenPACServerAPI;
+import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
+import xaero.pac.common.server.parties.party.api.IServerPartyAPI;
 
 import java.util.UUID;
 
@@ -48,13 +52,8 @@ public class SkirmishManager {
 
     public boolean handlePlayerDeath(ServerPlayerEntity player) {
 
-        if (currentSkirmish == null) {
-            return true;
-        }
-
-        if (currentSkirmish.isPlayerInSkirmish(player)) {
-            currentSkirmish.handlePlayerDeath(player);
-            return false;
+        if (currentSkirmish != null) {
+            return currentSkirmish.handlePlayerDeath(player);
         }
 
         return true;
@@ -63,5 +62,39 @@ public class SkirmishManager {
 
     public void setCurrentChallenge(SkirmishChallenge challenge) {
         this.currentChallenge = challenge;
+    }
+
+    public boolean isShipInSkirmish(long id) {
+        if (currentSkirmish == null) {
+            return false;
+        }
+        return currentSkirmish.isShipInSkirmish(id);
+    }
+
+    public void endSkirmishForShip(MinecraftServer server, long id) {
+        if (currentSkirmish.isChallengerShip(id)) {
+            endSkirmish(server, EndOfSkirmishType.OPPONENTS_WIN);
+        }
+        else {
+            endSkirmish(server, EndOfSkirmishType.CHALLENGERS_WIN);
+        }
+    }
+
+    public void handlePlayerQuit(MinecraftServer server, ServerPlayerEntity player) {
+        if (currentChallenge != null) {
+            IPartyManagerAPI pm = OpenPACServerAPI.get(server).getPartyManager();
+            IServerPartyAPI chParty = pm.getPartyById(currentChallenge.chPartyId);
+            IServerPartyAPI oppParty = pm.getPartyById(currentChallenge.oppPartyId);
+            //Check if player who left is party leader for either party
+            if (chParty.getOwner().getUUID().equals(player.getUuid()) || oppParty.getOwner().getUUID().equals(player.getUuid())) {
+                //Cancel challenge
+                chParty.getOnlineMemberStream().forEach(p -> p.sendMessage(Text.literal("Skirmish challenge cancelled because a party leader left.")));
+                oppParty.getOnlineMemberStream().forEach(p -> p.sendMessage(Text.literal("Skirmish challenge cancelled because a party leader left.")));
+            }
+        }
+
+        if (currentSkirmish != null) {
+            currentSkirmish.handlePlayerQuit(server, player);
+        }
     }
 }

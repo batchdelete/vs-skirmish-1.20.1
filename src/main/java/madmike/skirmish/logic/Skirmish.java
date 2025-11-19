@@ -1,5 +1,6 @@
 package madmike.skirmish.logic;
 
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.world.GameMode;
@@ -16,6 +17,10 @@ public class Skirmish {
 
     private Set<UUID> spectators;
 
+    long chShipId;
+
+    long oppShipId;
+
     private long expiresAt;
 
     public SkirmishChallenge getChallenge() {
@@ -30,20 +35,63 @@ public class Skirmish {
         return challengers.contains(player.getUuid()) || opponents.contains(player.getUuid());
     }
 
-    public void handlePlayerDeath(ServerPlayerEntity player) {
-
+    public boolean handlePlayerDeath(ServerPlayerEntity player) {
         UUID id = player.getUuid();
-
-        opponents.remove(id);
-        challengers.remove(id);
-
-        if (opponents.isEmpty()) {
-            SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
+        if (challengers.remove(id)) {
+            player.setHealth(player.getMaxHealth());
+            if (challengers.isEmpty()) {
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.OPPONENTS_WIN);
+            }
+            else {
+                player.changeGameMode(GameMode.SPECTATOR);
+                spectators.add(id);
+                player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+            }
+            return false;
         }
 
-        player.setHealth(player.getMaxHealth());
-        player.changeGameMode(GameMode.SPECTATOR);
-        player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+        if (opponents.remove(id)) {
+            player.setHealth(player.getMaxHealth());
+            if (opponents.isEmpty()) {
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
+            }
+            else {
+                player.changeGameMode(GameMode.SPECTATOR);
+                spectators.add(id);
+                player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+            }
+            return false;
+        }
 
+        // player not in a skirmish, return true to allow death
+        return true;
+    }
+
+    public boolean isShipInSkirmish(long id) {
+        return id == chShipId || id == oppShipId;
+    }
+
+    public boolean isChallengerShip(long id) {
+        return chShipId == id;
+    }
+
+    public void handlePlayerQuit(MinecraftServer server, ServerPlayerEntity player) {
+        UUID id = player.getUuid();
+        if (opponents.remove(id)) {
+            if (opponents.isEmpty()) {
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
+            }
+        }
+
+        if (opponents.remove(id)) {
+            player.setHealth(player.getMaxHealth());
+            if (opponents.isEmpty()) {
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
+            }
+            else {
+                player.changeGameMode(GameMode.SPECTATOR);
+                player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+            }
+        }
     }
 }

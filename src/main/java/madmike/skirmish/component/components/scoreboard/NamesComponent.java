@@ -1,4 +1,4 @@
-package madmike.skirmish.component.components;
+package madmike.skirmish.component.components.scoreboard;
 
 import dev.onyxstudios.cca.api.v3.component.ComponentV3;
 import net.minecraft.nbt.NbtCompound;

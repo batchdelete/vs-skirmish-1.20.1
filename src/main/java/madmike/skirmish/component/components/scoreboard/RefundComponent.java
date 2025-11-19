@@ -1,4 +1,4 @@
-package madmike.skirmish.component.components;
+package madmike.skirmish.component.components.scoreboard;
 
 import com.glisco.numismaticoverhaul.ModComponents;
 import dev.onyxstudios.cca.api.v3.component.ComponentV3;
