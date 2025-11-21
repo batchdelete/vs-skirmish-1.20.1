@@ -7,6 +7,7 @@ import g_mungus.vlib.v2.api.extension.ShipExtKt;
 import madmike.skirmish.VSSkirmish;
 import madmike.skirmish.component.SkirmishComponents;
 import madmike.skirmish.feature.blocks.SkirmishSpawnBlock;
+import net.minecraft.block.BlockState;
 import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -40,26 +41,35 @@ public class SaveExe {
             return 0;
         }
 
-        ServerWorld world = player.getServerWorld();
         // Get the ship the player is currently on
+        ServerWorld world = player.getServerWorld();
         ServerShip ship = VSGameUtilsKt.getShipManagingPos(world, player.getBlockPos());
         if (ship == null) {
             player.sendMessage(Text.literal("§cYou are not standing on a ship or there was an error saving it"), false);
             return 0;
         }
 
-        World shipYard = ctx.getSource().getServer().getWorld(RegistryKey.of() ship.getChunkClaimDimension());
-
+        // Scan for a Skirmish Spawn Block
         AtomicBoolean found = new AtomicBoolean(false);
         BlockPos[] foundPos = new BlockPos[1]; // mutable container
 
-        ShipExtKt.forEachBlock(ship, (blockPos) -> {
-            if (found.get()) return;
-            if (blockPos instanceof SkirmishSpawnBlock) {
+        ShipExtKt.forEachBlock(ship, blockPos -> {
+            if (found.get()) return null;
+
+            // Correct way to get the block state
+            BlockState state = world.getBlockState(blockPos);
+
+            if (state.getBlock() instanceof SkirmishSpawnBlock) {
                 found.set(true);
                 foundPos[0] = blockPos;
             }
+            return null;
         });
+
+        if (foundPos[0] == null) {
+            player.sendMessage(Text.literal("§cCould not find a Skirmish Spawn Block, please place one where you would like to spawn during a skirmish."), false);
+            return 0;
+        }
 
         Identifier filePath = new Identifier(VSSkirmish.MOD_ID, "/ships/" + party.getId());
 
