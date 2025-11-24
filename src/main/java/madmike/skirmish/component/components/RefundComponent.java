@@ -2,6 +2,7 @@ package madmike.skirmish.component.components;
 
 import com.glisco.numismaticoverhaul.ModComponents;
 import dev.onyxstudios.cca.api.v3.component.ComponentV3;
+import madmike.skirmish.logic.SkirmishChallenge;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -32,14 +33,13 @@ public class RefundComponent implements ComponentV3 {
      * Refunds wager amounts to both players.
      * If a player is offline, the refund is stored until next login.
      */
-//    public void refundChallenge(MinecraftServer server, SkirmishChallenge challenge) {
-//        PlayerManager pm = server.getPlayerManager();
-//
-//        refundPlayer(pm, challenge.challengerId, challenge.wager);
-//        refundPlayer(pm, challenge.opponentId, challenge.wager);
-//    }
+    public void refundChallenge(MinecraftServer server, SkirmishChallenge challenge) {
+        refundPlayer(server, challenge.getChPartyId(), challenge.getWager());
+        refundPlayer(server, challenge.getOppPartyId(), challenge.getWager());
+    }
 
-    public void refundPlayer(PlayerManager pm, UUID playerId, long wager) {
+    public void refundPlayer(MinecraftServer server, UUID playerId, long wager) {
+        PlayerManager pm = server.getPlayerManager();
         ServerPlayerEntity player = pm.getPlayer(playerId);
 
         if (player != null) {

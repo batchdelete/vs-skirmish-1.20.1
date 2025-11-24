@@ -1,24 +1,18 @@
 package madmike.skirmish.command.exe;
 
 import com.mojang.brigadier.context.CommandContext;
-import g_mungus.vlib.api.VLibGameUtils;
 import g_mungus.vlib.v2.api.VLibAPI;
 import g_mungus.vlib.v2.api.extension.ShipExtKt;
 import madmike.skirmish.VSSkirmish;
-import madmike.skirmish.component.SkirmishComponents;
 import madmike.skirmish.feature.blocks.SkirmishSpawnBlock;
 import net.minecraft.block.BlockState;
-import net.minecraft.registry.RegistryKey;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-import org.joml.Vector3d;
 import org.valkyrienskies.core.api.ships.ServerShip;
-import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import xaero.pac.common.server.api.OpenPACServerAPI;
 import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
@@ -56,7 +50,6 @@ public class SaveExe {
         ShipExtKt.forEachBlock(ship, blockPos -> {
             if (found.get()) return null;
 
-            // Correct way to get the block state
             BlockState state = world.getBlockState(blockPos);
 
             if (state.getBlock() instanceof SkirmishSpawnBlock) {
@@ -67,7 +60,7 @@ public class SaveExe {
         });
 
         if (foundPos[0] == null) {
-            player.sendMessage(Text.literal("§cCould not find a Skirmish Spawn Block, please place one where you would like to spawn during a skirmish."), false);
+            player.sendMessage(Text.literal("§cCould not detect a Skirmish Spawn Block, place one where you would like to spawn during a skirmish."), false);
             return 0;
         }
 

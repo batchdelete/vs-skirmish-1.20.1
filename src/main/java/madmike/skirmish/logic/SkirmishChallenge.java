@@ -13,25 +13,25 @@ import xaero.pac.common.server.parties.party.api.IServerPartyAPI;
 import java.util.UUID;
 
 public class SkirmishChallenge {
-    UUID chPartyId;
-    UUID chLeaderId;
-    StructureTemplate chShip;
+    private final UUID chPartyId;
+    private final UUID chLeaderId;
+    private final StructureTemplate chShipTemplate;
 
-    UUID oppPartyId;
-    UUID oppLeaderId;
-    StructureTemplate oppShip;
+    private final UUID oppPartyId;
+    private final UUID oppLeaderId;
+    private final StructureTemplate oppShipTemplate;
 
-    long wager;
-    long expiresAt;
+    private final long wager;
+    private final long expiresAt;
 
-    public SkirmishChallenge(UUID chPartyId, UUID chLeaderId, StructureTemplate chShip, UUID oppPartyId, UUID oppLeaderId, StructureTemplate oppShip, long wager) {
+    public SkirmishChallenge(UUID chPartyId, UUID chLeaderId, StructureTemplate chShipTemplate, UUID oppPartyId, UUID oppLeaderId, StructureTemplate oppShip, long wager) {
         this.chPartyId = chPartyId;
         this.chLeaderId = chLeaderId;
-        this.chShip = chShip;
+        this.chShipTemplate = chShipTemplate;
 
         this.oppPartyId = oppPartyId;
         this.oppLeaderId = oppLeaderId;
-        this.oppShip = oppShip;
+        this.oppShipTemplate = oppShip;
 
         this.wager = wager;
         this.expiresAt = (SkirmishConfig.skirmishChallengeMaxTime * 1000L) + System.currentTimeMillis();
@@ -41,11 +41,13 @@ public class SkirmishChallenge {
         return chPartyId;
     }
     
-    public StructureTemplate getChShip() { return chShip; }
+    public StructureTemplate getChShipTemplate() { return chShipTemplate; }
 
     public UUID getOppPartyId() {
         return oppPartyId;
     }
+
+    public StructureTemplate getOppShipTemplate() { return oppShipTemplate; }
 
     public long getWager() {
         return wager;
@@ -66,13 +68,32 @@ public class SkirmishChallenge {
         if (oppParty != null) {
             oppParty.getOnlineMemberStream().forEach(p -> p.sendMessage(msg));
         }
-        SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundPlayer(server.getPlayerManager(), chLeaderId, wager);
+        SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundPlayer(server, chLeaderId, wager);
     }
 
-    public void handlePlayerQuit(ServerPlayerEntity player) {
+    public void handlePlayerQuit(MinecraftServer server, ServerPlayerEntity player) {
         UUID id = player.getUuid();
-        if (chLeaderId.equals(id) || oppPartyId.equals(id)) {
-
+        if (chLeaderId.equals(id) || oppLeaderId.equals(id)) {
+            broadcastMsg(player.getServer(), "One of the party leaders has quit, cancelling skirmish challenge");
+            SkirmishComponents.REFUNDS.get(player.getScoreboard()).refundPlayer(server, chLeaderId, wager);
         }
     }
+
+    public void broadcastMsg(MinecraftServer server, String msg) {
+        IPartyManagerAPI pm = OpenPACServerAPI.get(server).getPartyManager();
+        IServerPartyAPI chParty = pm.getPartyById(chPartyId);
+        if (chParty != null) {
+            chParty.getOnlineMemberStream().forEach(p -> {
+                p.sendMessage(Text.literal(msg));
+            });
+        }
+        IServerPartyAPI oppParty = pm.getPartyById(oppPartyId);
+        if (oppParty != null) {
+            oppParty.getOnlineMemberStream().forEach(p -> {
+                p.sendMessage(Text.literal(msg));
+            });
+        }
+    }
+
+
 }

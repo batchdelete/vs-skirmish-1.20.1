@@ -20,23 +20,47 @@ import java.util.UUID;
 public class Skirmish {
 
     private final Set<UUID> challengers;
+    private final UUID chPartyId;
 
     private final Set<UUID> opponents;
 
-    private Set<UUID> spectators;
+    private final UUID oppPartyId;
 
-    long chShipId;
+    private final Set<UUID> spectators;
 
-    long oppShipId;
+
+
+    private final long chShipId;
+
+    private final long oppShipId;
 
     private final long expiresAt;
 
-    public Skirmish(Set<UUID> challengers, Set<UUID> opponents, long chShipId, long oppShipId) {
+    public Skirmish(Set<UUID> challengers, UUID chPartyId, Set<UUID> opponents, UUID oppPartyId, long chShipId, long oppShipId) {
         this.challengers = challengers;
+        this.chPartyId = chPartyId;
         this.opponents = opponents;
+        this.oppPartyId = oppPartyId;
         this.chShipId = chShipId;
         this.oppShipId = oppShipId;
         this.expiresAt = (SkirmishConfig.skirmishMaxTime * 1000L) + System.currentTimeMillis();
+        this.spectators = new HashSet<>();
+    }
+
+    public UUID getOppPartyId() {
+        return oppPartyId;
+    }
+
+    public UUID getChPartyId() {
+        return chPartyId;
+    }
+
+    public Set<UUID> getAllInvolvedPlayers() {
+        Set<UUID> players = new HashSet<>();
+        players.addAll(spectators);
+        players.addAll(opponents);
+        players.addAll(challengers);
+        return players;
     }
 
     public boolean isExpired() {
@@ -52,7 +76,7 @@ public class Skirmish {
         if (challengers.remove(id)) {
             player.setHealth(player.getMaxHealth());
             if (challengers.isEmpty()) {
-                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.OPPONENTS_WIN);
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.OPPONENTS_WIN_KILLS);
             }
             else {
                 player.changeGameMode(GameMode.SPECTATOR);
@@ -65,7 +89,7 @@ public class Skirmish {
         if (opponents.remove(id)) {
             player.setHealth(player.getMaxHealth());
             if (opponents.isEmpty()) {
-                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN_KILLS);
             }
             else {
                 player.changeGameMode(GameMode.SPECTATOR);
@@ -91,22 +115,13 @@ public class Skirmish {
         UUID id = player.getUuid();
         if (challengers.remove(id)) {
             if (challengers.isEmpty()) {
-                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
-            }
-            else {
-                player.changeGameMode(GameMode.SPECTATOR);
-                player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.OPPONENTS_WIN_KILLS);
             }
         }
 
         if (opponents.remove(id)) {
-            player.setHealth(player.getMaxHealth());
             if (opponents.isEmpty()) {
-                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN);
-            }
-            else {
-                player.changeGameMode(GameMode.SPECTATOR);
-                player.sendMessage(Text.literal("You Died. Spectator Mode Enabled."));
+                SkirmishManager.INSTANCE.endSkirmish(player.getServer(), EndOfSkirmishType.CHALLENGERS_WIN_KILLS);
             }
         }
     }
