@@ -1,7 +1,5 @@
 package madmike.skirmish.logic;
 
-import com.glisco.numismaticoverhaul.ModComponents;
-import com.glisco.numismaticoverhaul.currency.CurrencyComponent;
 import g_mungus.vlib.v2.api.VLibAPI;
 import g_mungus.vlib.v2.api.extension.ShipExtKt;
 import madmike.skirmish.component.SkirmishComponents;
@@ -29,7 +27,6 @@ import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
 import xaero.pac.common.server.parties.party.api.IServerPartyAPI;
 
 import java.io.IOException;
-import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -116,7 +113,7 @@ public class SkirmishManager {
 
         // OPP SHIP
 
-        ServerShip oppShip = VLibAPI.placeTemplateAsShip(challenge.getOppShipTemplate(), skirmishDim, new BlockPos(0, 30, 0), false);
+        ServerShip oppShip = VLibAPI.placeTemplateAsShip(challenge.getOppShipTemplate(), skirmishDim, new BlockPos(0, 30, 200), false);
         if (oppShip == null) {
             challenge.broadcastMsg(server, "Error getting/placing opponents ship, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);

@@ -13,6 +13,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.valkyrienskies.core.api.ships.ServerShip;
+import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import xaero.pac.common.server.api.OpenPACServerAPI;
 import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
@@ -36,17 +37,26 @@ public class SaveExe {
         }
 
         // Get the ship the player is currently on
-        ServerWorld world = player.getServerWorld();
-        ServerShip ship = VSGameUtilsKt.getShipManagingPos(world, player.getBlockPos());
+
+        Ship ship = VSGameUtilsKt.getShipManaging(player);
         if (ship == null) {
-            player.sendMessage(Text.literal("§cYou are not standing on a ship or there was an error saving it"), false);
+            player.sendMessage(Text.literal("§cYou must be driving the ship you want to save"), false);
+            return 0;
+        }
+
+        ServerShip sShip = null;
+        if (ship instanceof ServerShip serverShip) {
+            sShip = serverShip;
+        }
+        if (sShip == null) {
+            player.sendMessage(Text.literal("§cError getting Server Ship"), false);
             return 0;
         }
 
         // Scan for a Skirmish Spawn Block
         AtomicBoolean found = new AtomicBoolean(false);
         BlockPos[] foundPos = new BlockPos[1]; // mutable container
-
+        ServerWorld world = player.getServerWorld();
         ShipExtKt.forEachBlock(ship, blockPos -> {
             if (found.get()) return null;
 
@@ -66,7 +76,7 @@ public class SaveExe {
 
         Identifier filePath = new Identifier(VSSkirmish.MOD_ID, "/ships/" + party.getId());
 
-        VLibAPI.saveShipToTemplate(ship, filePath, world);
+        VLibAPI.saveShipToTemplate(sShip, filePath, world);
 
 
         player.sendMessage(Text.literal("§6[Skirmish Save] §7Saved your party ship."), false);
