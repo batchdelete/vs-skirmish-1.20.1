@@ -42,8 +42,12 @@ public class ChallengeTeamSug {
             if (owner == null) {
                 continue;
             }
+            String partyName = pc.getLoadedConfig(ownerId).getEffective(PlayerConfigOptions.PARTY_NAME);
+            if (partyName.isEmpty()) {
+                partyName = party.getDefaultName();
+            }
 
-            builder.suggest(pc.getLoadedConfig(ownerId).getEffective(PlayerConfigOptions.PARTY_NAME));
+            builder.suggest(partyName);
         }
 
         return builder.buildFuture();

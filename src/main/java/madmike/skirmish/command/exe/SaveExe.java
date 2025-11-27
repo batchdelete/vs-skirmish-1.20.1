@@ -11,9 +11,12 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.RaycastContext;
 import org.valkyrienskies.core.api.ships.ServerShip;
-import org.valkyrienskies.core.api.ships.Ship;
 import org.valkyrienskies.mod.common.VSGameUtilsKt;
 import xaero.pac.common.server.api.OpenPACServerAPI;
 import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
@@ -38,31 +41,85 @@ public class SaveExe {
 
         // Get the ship the player is currently on
 
-        Ship ship = VSGameUtilsKt.getShipManaging(player);
+        ServerWorld world = player.getServerWorld();
+        VSSkirmish.LOGGER.info("[SKIRMISH] Starting raycast routine for player {}", player.getName().getString());
+
+// --- Camera start vec ---
+        Vec3d start = player.getCameraPosVec(1.0f);
+        VSSkirmish.LOGGER.info("[SKIRMISH] start vec = {}", start);
+
+// --- End point (straight down 50 blocks) ---
+        Vec3d end = start.add(0, -50, 0);
+        VSSkirmish.LOGGER.info("[SKIRMISH] end vec = {}", end);
+
+// --- Perform raycast ---
+        VSSkirmish.LOGGER.info("[SKIRMISH] Performing raycast...");
+        RaycastContext ray = new RaycastContext(
+                start,
+                end,
+                RaycastContext.ShapeType.COLLIDER,
+                RaycastContext.FluidHandling.NONE,
+                player
+        );
+
+        BlockHitResult hit = world.raycast(ray);
+
+        if (hit == null) {
+            VSSkirmish.LOGGER.info("[SKIRMISH] world.raycast() returned NULL");
+        } else {
+            VSSkirmish.LOGGER.info("[SKIRMISH] hit type = {}", hit.getType());
+            VSSkirmish.LOGGER.info("[SKIRMISH] hit pos = {}", hit.getPos());
+        }
+
+// --- Extract BlockPos ---
+        BlockPos searchPos = null;
+
+        if (hit != null && hit.getType() == HitResult.Type.BLOCK) {
+            searchPos = hit.getBlockPos();
+            VSSkirmish.LOGGER.info("[SKIRMISH] BlockPos found = {}", searchPos);
+        } else {
+            VSSkirmish.LOGGER.info("[SKIRMISH] No BLOCK hit result found; searchPos is NULL");
+        }
+
+        if (searchPos == null) {
+            VSSkirmish.LOGGER.info("[SKIRMISH] Could not compute a valid BlockPos; likely below world or in void");
+            player.sendMessage(Text.literal("§cAre you in the void? Couldn't find a valid BlockPos."), false);
+            return 0;
+        }
+
+// --- Try getting ship ---
+        VSSkirmish.LOGGER.info("[SKIRMISH] Querying VS ship for BlockPos {}", searchPos);
+        ServerShip ship = VSGameUtilsKt.getShipManagingPos(world, searchPos);
+
         if (ship == null) {
-            player.sendMessage(Text.literal("§cYou must be driving the ship you want to save"), false);
+            VSSkirmish.LOGGER.info("[SKIRMISH] VS returned NULL ship for pos {}", searchPos);
+            player.sendMessage(Text.literal("§cYou are not standing on a ship or there was an error saving it"), false);
             return 0;
         }
 
-        ServerShip sShip = null;
-        if (ship instanceof ServerShip serverShip) {
-            sShip = serverShip;
-        }
-        if (sShip == null) {
-            player.sendMessage(Text.literal("§cError getting Server Ship"), false);
-            return 0;
-        }
+// --- Found ship ---
+        VSSkirmish.LOGGER.info("[SKIRMISH] Ship FOUND! Ship ID = {}", ship.getId());
+        VSSkirmish.LOGGER.info("[SKIRMISH] Ship successfully detected beneath player {}", player.getName().getString());
 
-        // Scan for a Skirmish Spawn Block
+        // ============================================================
+// Scan for a Skirmish Spawn Block
+// ============================================================
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] Beginning scan for Skirmish Spawn Block on ship {}", ship.getId());
+
         AtomicBoolean found = new AtomicBoolean(false);
         BlockPos[] foundPos = new BlockPos[1]; // mutable container
-        ServerWorld world = player.getServerWorld();
+
         ShipExtKt.forEachBlock(ship, blockPos -> {
+            // If already found, skip
             if (found.get()) return null;
 
             BlockState state = world.getBlockState(blockPos);
 
+            VSSkirmish.LOGGER.info("[SKIRMISH] Checking block at {} -> {}", blockPos, state.getBlock());
+
             if (state.getBlock() instanceof SkirmishSpawnBlock) {
+                VSSkirmish.LOGGER.info("[SKIRMISH] FOUND SkirmishSpawnBlock at {}", blockPos);
                 found.set(true);
                 foundPos[0] = blockPos;
             }
@@ -70,16 +127,31 @@ public class SaveExe {
         });
 
         if (foundPos[0] == null) {
+            VSSkirmish.LOGGER.info("[SKIRMISH] No SkirmishSpawnBlock detected on ship {}", ship.getId());
             player.sendMessage(Text.literal("§cCould not detect a Skirmish Spawn Block, place one where you would like to spawn during a skirmish."), false);
             return 0;
         }
 
-        Identifier filePath = new Identifier(VSSkirmish.MOD_ID, "/ships/" + party.getId());
+        VSSkirmish.LOGGER.info("[SKIRMISH] Using spawn block position {}", foundPos[0]);
 
-        VLibAPI.saveShipToTemplate(sShip, filePath, world);
+// ============================================================
+// Save ship template
+// ============================================================
 
+        Identifier filePath = new Identifier(VSSkirmish.MOD_ID, "ships/" + party.getId());
+        VSSkirmish.LOGGER.info("[SKIRMISH] Saving ship {} to structure path {}", ship.getId(), filePath);
 
-        player.sendMessage(Text.literal("§6[Skirmish Save] §7Saved your party ship."), false);
+        try {
+            VLibAPI.saveShipToTemplate(ship, filePath, world);
+            VSSkirmish.LOGGER.info("[SKIRMISH] Ship {} saved successfully for party {}", ship.getId(), party.getId());
+        } catch (Exception e) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] Error saving ship {} for party {}: {}", ship.getId(), party.getId(), e.getMessage());
+            e.printStackTrace();
+            player.sendMessage(Text.literal("§cThere was an error saving your ship. Check logs."), false);
+            return 0;
+        }
+
+        player.sendMessage(Text.literal("§6[Skirmish Save] §7Saved your party's ship."), false);
         return 1;
     }
 }

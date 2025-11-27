@@ -180,4 +180,12 @@ public class Skirmish {
             });
         }
     }
+
+    public long getChShipId() {
+        return chShipId;
+    }
+
+    public long getOppShipId() {
+        return oppShipId;
+    }
 }

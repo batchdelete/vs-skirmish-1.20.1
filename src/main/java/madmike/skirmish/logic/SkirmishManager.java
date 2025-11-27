@@ -2,6 +2,7 @@ package madmike.skirmish.logic;
 
 import g_mungus.vlib.v2.api.VLibAPI;
 import g_mungus.vlib.v2.api.extension.ShipExtKt;
+import madmike.skirmish.VSSkirmish;
 import madmike.skirmish.component.SkirmishComponents;
 import madmike.skirmish.component.components.InventoryComponent;
 import madmike.skirmish.component.components.RefundComponent;
@@ -69,211 +70,373 @@ public class SkirmishManager {
     }
 
     public void startSkirmish(MinecraftServer server, SkirmishChallenge challenge) {
-        //spawn ships
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] ===== Starting Skirmish =====");
+        VSSkirmish.LOGGER.info("[SKIRMISH] Challenge: {}", challenge);
+
+        // ============================================================
+        // LOAD SKIRMISH DIMENSION
+        // ============================================================
         ServerWorld skirmishDim = server.getWorld(SkirmishDimension.SKIRMISH_LEVEL_KEY);
+        VSSkirmish.LOGGER.info("[SKIRMISH] Loading Skirmish Dimension: {}", SkirmishDimension.SKIRMISH_LEVEL_KEY);
+
         if (skirmishDim == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Could not load skirmish dimension");
             challenge.broadcastMsg(server, "Error getting skirmish dimension, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
-        // CH SHIP
-
+        // ============================================================
+        // PLACE CHALLENGER SHIP
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Placing Challenger Ship at (0, 30, 0)");
         ServerShip chShip = VLibAPI.placeTemplateAsShip(challenge.getChShipTemplate(), skirmishDim, new BlockPos(0, 30, 0), false);
+
         if (chShip == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Failed to place Challenger ship!");
             challenge.broadcastMsg(server, "Error getting/placing challengers ship, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
-        // Scan for a Skirmish Spawn Block
-        AtomicBoolean found = new AtomicBoolean(false);
-        BlockPos[] foundPos = new BlockPos[1]; // mutable container
+        VSSkirmish.LOGGER.info("[SKIRMISH] Challenger Ship placed successfully. Ship ID = {}", chShip.getId());
+
+        // ============================================================
+        // SCAN FOR CHALLENGER SPAWN BLOCK
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Scanning Challenger Ship for Skirmish Spawn Block...");
+
+        AtomicBoolean foundChSpawn = new AtomicBoolean(false);
+        BlockPos[] chSpawnPos = new BlockPos[1];
 
         ShipExtKt.forEachBlock(chShip, blockPos -> {
-            if (found.get()) return null;
+            if (foundChSpawn.get()) return null;
 
             BlockState state = skirmishDim.getBlockState(blockPos);
 
+            VSSkirmish.LOGGER.info("[SKIRMISH] CH scan -> {} : {}", blockPos, state.getBlock());
+
             if (state.getBlock() instanceof SkirmishSpawnBlock) {
-                found.set(true);
-                foundPos[0] = blockPos;
+                foundChSpawn.set(true);
+                chSpawnPos[0] = blockPos;
+                VSSkirmish.LOGGER.info("[SKIRMISH] FOUND CH Skirmish Spawn Block at {}", blockPos);
             }
             return null;
         });
 
-        if (foundPos[0] == null) {
+        if (chSpawnPos[0] == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Challenger Ship missing Skirmish Spawn Block!");
             challenge.broadcastMsg(server,"Could not detect a Skirmish Spawn Block on challenger ship, this should never happen, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
-        // OPP SHIP
-
+        // ============================================================
+        // PLACE OPPONENT SHIP
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Placing Opponent Ship at (0, 30, 200)");
         ServerShip oppShip = VLibAPI.placeTemplateAsShip(challenge.getOppShipTemplate(), skirmishDim, new BlockPos(0, 30, 200), false);
+
         if (oppShip == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Failed to place Opponent ship!");
             challenge.broadcastMsg(server, "Error getting/placing opponents ship, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
-        // Scan for a Skirmish Spawn Block
-        AtomicBoolean found2 = new AtomicBoolean(false);
-        BlockPos[] foundPos2 = new BlockPos[1]; // mutable container
+        VSSkirmish.LOGGER.info("[SKIRMISH] Opponent Ship placed successfully. Ship ID = {}", oppShip.getId());
+
+        // ============================================================
+        // SCAN FOR OPPONENT SPAWN BLOCK
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Scanning Opponent Ship for Skirmish Spawn Block...");
+
+        AtomicBoolean foundOppSpawn = new AtomicBoolean(false);
+        BlockPos[] oppSpawnPos = new BlockPos[1];
 
         ShipExtKt.forEachBlock(oppShip, blockPos -> {
-            if (found2.get()) return null;
+            if (foundOppSpawn.get()) return null;
 
             BlockState state = skirmishDim.getBlockState(blockPos);
 
+            VSSkirmish.LOGGER.info("[SKIRMISH] OPP scan -> {} : {}", blockPos, state.getBlock());
+
             if (state.getBlock() instanceof SkirmishSpawnBlock) {
-                found2.set(true);
-                foundPos2[0] = blockPos;
+                foundOppSpawn.set(true);
+                oppSpawnPos[0] = blockPos;
+                VSSkirmish.LOGGER.info("[SKIRMISH] FOUND OPP Skirmish Spawn Block at {}", blockPos);
             }
             return null;
         });
 
-        if (foundPos2[0] == null) {
+        if (oppSpawnPos[0] == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Opponent Ship missing Skirmish Spawn Block!");
             challenge.broadcastMsg(server,"Could not detect a Skirmish Spawn Block on opponent ship, this should never happen, cancelling skirmish");
             SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
-        // PLAYERS
-        // gather and teleport players
+        // ============================================================
+        // LOAD PARTIES & TELEPORT PLAYERS
+        // ============================================================
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] Fetching party info...");
 
         Scoreboard sb = server.getScoreboard();
         IPartyManagerAPI pm = OpenPACServerAPI.get(server).getPartyManager();
 
         IServerPartyAPI chParty = pm.getPartyById(challenge.getChPartyId());
         if (chParty == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Challenger party not found!");
             challenge.broadcastMsg(server,"Error getting challenging party, cancelling skirmish");
-            SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
+            SkirmishComponents.REFUNDS.get(sb).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
         IServerPartyAPI oppParty = pm.getPartyById(challenge.getOppPartyId());
         if (oppParty == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Opponent party not found!");
             challenge.broadcastMsg(server,"Error getting opponent party, cancelling skirmish");
-            SkirmishComponents.REFUNDS.get(server.getScoreboard()).refundChallenge(server, challenge);
+            SkirmishComponents.REFUNDS.get(sb).refundChallenge(server, challenge);
             currentChallenge = null;
             return;
         }
 
+        // Challenger teleports
         Set<UUID> challengerIds = new HashSet<>();
+        VSSkirmish.LOGGER.info("[SKIRMISH] Teleporting Challenger Party: {}", chParty.getId());
 
         chParty.getOnlineMemberStream().forEach(player -> {
-            SkirmishComponents.RETURN_POINTS.get(sb).set(player.getUuid(), player.getBlockPos(), player.getServerWorld().getRegistryKey());
-            SkirmishComponents.INVENTORY.get(sb).saveInventory(player);
             challengerIds.add(player.getUuid());
-            player.teleport(skirmishDim, foundPos[0].getX(), foundPos[0].getY(), foundPos[0].getZ(), player.getYaw(), player.getPitch());
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Saving return point for CH player {}", player.getGameProfile().getName());
+            SkirmishComponents.RETURN_POINTS.get(sb).set(player.getUuid(), player.getBlockPos(), player.getServerWorld().getRegistryKey());
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Saving inventory for CH player {}", player.getGameProfile().getName());
+            SkirmishComponents.INVENTORY.get(sb).saveInventory(player);
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Teleporting CH {} to {}", player.getGameProfile().getName(), chSpawnPos[0]);
+            player.teleport(skirmishDim, chSpawnPos[0].getX(), chSpawnPos[0].getY(), chSpawnPos[0].getZ(), player.getYaw(), player.getPitch());
         });
 
+        // Opponent teleports
         Set<UUID> opponentIds = new HashSet<>();
+        VSSkirmish.LOGGER.info("[SKIRMISH] Teleporting Opponent Party: {}", oppParty.getId());
 
         oppParty.getOnlineMemberStream().forEach(player -> {
-            SkirmishComponents.RETURN_POINTS.get(sb).set(player.getUuid(), player.getBlockPos(), player.getServerWorld().getRegistryKey());
-            SkirmishComponents.INVENTORY.get(sb).saveInventory(player);
             opponentIds.add(player.getUuid());
-            player.teleport(skirmishDim, foundPos2[0].getX(), foundPos2[0].getY(), foundPos2[0].getZ(), player.getYaw(), player.getPitch());
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Saving return point for OPP player {}", player.getGameProfile().getName());
+            SkirmishComponents.RETURN_POINTS.get(sb).set(player.getUuid(), player.getBlockPos(), player.getServerWorld().getRegistryKey());
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Saving inventory for OPP player {}", player.getGameProfile().getName());
+            SkirmishComponents.INVENTORY.get(sb).saveInventory(player);
+
+            VSSkirmish.LOGGER.info("[SKIRMISH] Teleporting OPP {} to {}", player.getGameProfile().getName(), oppSpawnPos[0]);
+            player.teleport(skirmishDim, oppSpawnPos[0].getX(), oppSpawnPos[0].getY(), oppSpawnPos[0].getZ(), player.getYaw(), player.getPitch());
         });
 
-        //create skirmish
-        currentSkirmish = new Skirmish(challengerIds, chParty.getId(), challenge.getChLeaderId(), opponentIds, oppParty.getId(), challenge.getOppLeaderId(), chShip.getId(), oppShip.getId(), challenge.getWager());
-        //broadcast msg to all players
+        // ============================================================
+        // CREATE SKIRMISH
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Constructing Skirmish object...");
+
+        currentSkirmish = new Skirmish(
+                challengerIds,
+                chParty.getId(),
+                challenge.getChLeaderId(),
+                opponentIds,
+                oppParty.getId(),
+                challenge.getOppLeaderId(),
+                chShip.getId(),
+                oppShip.getId(),
+                challenge.getWager()
+        );
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] Skirmish created successfully!");
+
+        // ============================================================
+        // BROADCAST
+        // ============================================================
         challenge.broadcastMsg(server, "Skirmish Started!");
-        server.getPlayerManager().getPlayerList().forEach( player -> {
+
+        server.getPlayerManager().getPlayerList().forEach(player -> {
             UUID playerId = player.getUuid();
             if (!challengerIds.contains(playerId) && !opponentIds.contains(playerId)) {
                 player.sendMessage(Text.literal("A skirmish has started! Use /skirmish spectate to watch!"));
             }
         });
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] ===== Skirmish Started Successfully =====");
         currentChallenge = null;
     }
 
     public void endSkirmish(MinecraftServer server, EndOfSkirmishType type) {
-        ServerWorld skirmishDim = server.getWorld(SkirmishDimension.SKIRMISH_LEVEL_KEY);
-        if (skirmishDim == null) {
+        VSSkirmish.LOGGER.info("[SKIRMISH] ===== Ending Skirmish =====");
+
+        if (currentSkirmish == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Tried to end skirmish but currentSkirmish is NULL!");
             return;
         }
 
-        // award winner
-        // record stats
+        VSSkirmish.LOGGER.info("[SKIRMISH] Skirmish Type = {}", type);
+        VSSkirmish.LOGGER.info("[SKIRMISH] Challenger Party ID = {}", currentSkirmish.getChPartyId());
+        VSSkirmish.LOGGER.info("[SKIRMISH] Opponent Party ID = {}", currentSkirmish.getOppPartyId());
+
+        // ============================================================
+        // GET DIMENSION
+        // ============================================================
+        ServerWorld skirmishDim = server.getWorld(SkirmishDimension.SKIRMISH_LEVEL_KEY);
+        if (skirmishDim == null) {
+            VSSkirmish.LOGGER.error("[SKIRMISH] ERROR: Skirmish dimension is NULL");
+            return;
+        }
+
+        // ============================================================
+        // STATS + REFUNDS
+        // ============================================================
         StatsComponent sc = SkirmishComponents.STATS.get(server.getScoreboard());
         RefundComponent rc = SkirmishComponents.REFUNDS.get(server.getScoreboard());
 
+        VSSkirmish.LOGGER.info("[SKIRMISH] Applying results + stats for type {}", type);
+
         switch (type) {
+
             case CHALLENGERS_WIN_KILLS -> {
-                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0, currentSkirmish.getWager(), 0, 0, 0);
-                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1, 0, currentSkirmish.getWager(), 0, 0);
-                rc.refundPlayer(server, currentSkirmish.getChLeaderId(), currentSkirmish.getWager() * 20000L);
+                VSSkirmish.LOGGER.info("[SKIRMISH] Result: Challengers win by kills");
+
+                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0,
+                        currentSkirmish.getWager(), 0, 0, 0);
+
+                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1,
+                        0, currentSkirmish.getWager(), 0, 0);
+
+                rc.refundPlayer(server, currentSkirmish.getChLeaderId(),
+                        currentSkirmish.getWager() * 20000L);
+
                 currentSkirmish.broadcastMsg(server, "Challengers won by kills!");
             }
+
             case OPPONENTS_WIN_KILLS -> {
-                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 0, 1, 0, currentSkirmish.getWager(), 0, 0);
-                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 1, 0, currentSkirmish.getWager(), 0, 0, 0);
-                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(), currentSkirmish.getWager() * 20000L);
+                VSSkirmish.LOGGER.info("[SKIRMISH] Result: Opponents win by kills");
+
+                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 0, 1,
+                        0, currentSkirmish.getWager(), 0, 0);
+
+                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 1, 0,
+                        currentSkirmish.getWager(), 0, 0, 0);
+
+                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(),
+                        currentSkirmish.getWager() * 20000L);
+
                 currentSkirmish.broadcastMsg(server, "Opponents won by kills!");
             }
+
             case CHALLENGERS_WIN_SHIP -> {
-                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0, currentSkirmish.getWager(), 0, 0, 1);
-                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1, 0, currentSkirmish.getWager(), 1, 0);
-                rc.refundPlayer(server, currentSkirmish.getChLeaderId(), currentSkirmish.getWager() * 20000L);
+                VSSkirmish.LOGGER.info("[SKIRMISH] Result: Challengers win by ship destruction");
+
+                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0,
+                        currentSkirmish.getWager(), 0, 0, 1);
+
+                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1,
+                        0, currentSkirmish.getWager(), 1, 0);
+
+                rc.refundPlayer(server, currentSkirmish.getChLeaderId(),
+                        currentSkirmish.getWager() * 20000L);
+
                 currentSkirmish.broadcastMsg(server, "Challengers won by sinking the ship!");
             }
+
             case OPPONENTS_WIN_SHIP -> {
-                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0, currentSkirmish.getWager(), 0, 1, 0);
-                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1, 0, currentSkirmish.getWager(), 0, 1);
-                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(), currentSkirmish.getWager() * 20000L);
+                VSSkirmish.LOGGER.info("[SKIRMISH] Result: Opponents win by ship destruction");
+
+                sc.setPartySkirmishStats(currentSkirmish.getChPartyId(), 1, 0,
+                        currentSkirmish.getWager(), 0, 1, 0);
+
+                sc.setPartySkirmishStats(currentSkirmish.getOppPartyId(), 0, 1,
+                        0, currentSkirmish.getWager(), 0, 1);
+
+                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(),
+                        currentSkirmish.getWager() * 20000L);
+
                 currentSkirmish.broadcastMsg(server, "Opponents won by sinking the ship!");
             }
+
             case TIME -> {
-                rc.refundPlayer(server, currentSkirmish.getChLeaderId(), currentChallenge.getWager());
-                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(), currentChallenge.getWager());
+                VSSkirmish.LOGGER.info("[SKIRMISH] Result: Time ran out");
+
+                rc.refundPlayer(server, currentSkirmish.getChLeaderId(),
+                        currentSkirmish.getWager());
+
+                rc.refundPlayer(server, currentSkirmish.getOppLeaderId(),
+                        currentSkirmish.getWager());
+
                 currentSkirmish.broadcastMsg(server, "The time ran out on the skirmish!");
             }
         }
 
-        // tp back
-        // inventories
-        // game mode
+        // ============================================================
+        // TELEPORT PLAYERS BACK
+        // ============================================================
         Set<UUID> players = currentSkirmish.getAllInvolvedPlayers();
         PlayerManager pm = server.getPlayerManager();
+
         InventoryComponent ic = SkirmishComponents.INVENTORY.get(server.getScoreboard());
         ReturnPointComponent rpc = SkirmishComponents.RETURN_POINTS.get(server.getScoreboard());
+
+        VSSkirmish.LOGGER.info("[SKIRMISH] Teleporting {} players back...", players.size());
+
         for (UUID id : players) {
             ServerPlayerEntity player = pm.getPlayer(id);
             if (player != null) {
+
+                VSSkirmish.LOGGER.info("[SKIRMISH] Restoring {} (UUID={})",
+                        player.getGameProfile().getName(), id);
+
                 player.changeGameMode(GameMode.SURVIVAL);
                 ic.restoreInventory(player);
                 rpc.tpBack(server, player);
+            } else {
+                VSSkirmish.LOGGER.warn("[SKIRMISH] Player UUID {} was offline during restore", id);
             }
         }
 
+        // ============================================================
+        // DELETE SKIRMISH SHIPS
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Removing skirmish ships...");
 
-        //kill ships
         List<Ship> ships = VSGameUtilsKt.getAllShips(skirmishDim).stream().toList();
         for (Ship ship : ships) {
             if (ship instanceof ServerShip serverShip) {
-                VLibAPI.discardShip(serverShip, skirmishDim);
+                long id = serverShip.getId();
+                if (id == currentSkirmish.getChShipId() || id == currentSkirmish.getOppShipId()) {
+                    VSSkirmish.LOGGER.info("[SKIRMISH] Deleting ship {}", id);
+                    VLibAPI.discardShip(serverShip, skirmishDim);
+                }
             }
         }
 
+        // ============================================================
+        // WIPE DIMENSION REGION CONTENTS
+        // ============================================================
+        VSSkirmish.LOGGER.info("[SKIRMISH] Wiping skirmish dimension region files...");
 
-        // wipe dimension
         Path dimPath = server.getSavePath(WorldSavePath.ROOT)
                 .resolve("dimensions")
                 .resolve("vs-skirmish")
                 .resolve("region");
 
         if (!Files.exists(dimPath)) {
-            System.out.println("Skirmish region folder does not exist: " + dimPath);
+            VSSkirmish.LOGGER.warn("[SKIRMISH] Skirmish region folder does not exist: {}", dimPath);
+            currentSkirmish = null;
             return;
         }
 
@@ -282,16 +445,16 @@ public class SkirmishManager {
                     .forEach(path -> {
                         try {
                             Files.delete(path);
-                            System.out.println("Deleted: " + path);
+                            VSSkirmish.LOGGER.info("[SKIRMISH] Deleted region: {}", path);
                         } catch (IOException e) {
-                            System.err.println("Failed to delete: " + path);
-                            e.printStackTrace();
+                            VSSkirmish.LOGGER.error("[SKIRMISH] Failed to delete {}", path, e);
                         }
                     });
         } catch (IOException e) {
-            e.printStackTrace();
+            VSSkirmish.LOGGER.error("[SKIRMISH] IOException during dimension wipe", e);
         }
 
+        VSSkirmish.LOGGER.info("[SKIRMISH] ===== Skirmish End Complete =====");
         currentSkirmish = null;
     }
 

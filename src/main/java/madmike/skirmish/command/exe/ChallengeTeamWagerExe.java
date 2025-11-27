@@ -16,7 +16,6 @@ import net.minecraft.structure.StructureTemplate;
 import net.minecraft.structure.StructureTemplateManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.valkyrienskies.core.api.ships.Ship;
 import xaero.pac.common.server.api.OpenPACServerAPI;
 import xaero.pac.common.server.parties.party.api.IPartyManagerAPI;
 import xaero.pac.common.server.parties.party.api.IServerPartyAPI;
@@ -58,7 +57,7 @@ public class ChallengeTeamWagerExe {
         }
 
         StructureTemplateManager stm = player.getServerWorld().getStructureTemplateManager();
-        Optional<StructureTemplate> ship = stm.getTemplate(new Identifier(VSSkirmish.MOD_ID, "/ships/" + party.getId()));
+        Optional<StructureTemplate> ship = stm.getTemplate(new Identifier(VSSkirmish.MOD_ID, "ships/" + party.getId()));
         if (ship.isEmpty()) {
             player.sendMessage(Text.literal("Your party has no saved ship"));
             return 0;
@@ -75,7 +74,11 @@ public class ChallengeTeamWagerExe {
         for (UUID id : ownerIds) {
             ServerPlayerEntity otherPlayer = server.getPlayerManager().getPlayer(id);
             if (otherPlayer != null) {
-                if (pc.getLoadedConfig(id).getEffective(PlayerConfigOptions.PARTY_NAME).equals(teamName)) {
+                String partyName = pc.getLoadedConfig(id).getEffective(PlayerConfigOptions.PARTY_NAME);
+                if (partyName.isEmpty()) {
+                    partyName = party.getDefaultName();
+                }
+                if (partyName.equals(teamName) ) {
                     oppParty = api.getPartyManager().getPartyByOwner(id);
                     break;
                 }
@@ -98,7 +101,7 @@ public class ChallengeTeamWagerExe {
             return 0;
         }
 
-        Optional<StructureTemplate> oppShip = stm.getTemplate(new Identifier(VSSkirmish.MOD_ID, "/ships/" + oppParty.getId()));
+        Optional<StructureTemplate> oppShip = stm.getTemplate(new Identifier(VSSkirmish.MOD_ID, "ships/" + oppParty.getId()));
         if (oppShip.isEmpty()) {
             player.sendMessage(Text.literal("Could not find a ship for the other party"));
             return 0;
@@ -119,9 +122,13 @@ public class ChallengeTeamWagerExe {
         SkirmishChallenge challenge = new SkirmishChallenge(party.getId(), player.getUuid(), ship.get(), oppParty.getId(), oppLeader.getUuid(), oppShip.get(), wagerInt);
         sm.setCurrentChallenge(challenge);
 
-        String chPartyName = pc.getLoadedConfig(player.getUuid()).getEffective(PlayerConfigOptions.PARTY_NAME);
+        String chPartyName = pc.getLoadedConfig(oppLeader.getUuid()).getEffective(PlayerConfigOptions.PARTY_NAME);
+        if (chPartyName.isEmpty()) {
+            chPartyName = party.getDefaultName();
+        }
 
-        oppParty.getOnlineMemberStream().forEach(p -> p.sendMessage(Text.literal("Your party has been challenged to a duel by " + chPartyName + "! With a wager of " + wagerInt + " gold! Party leader, use /skirmish accept or /skirmish deny.")));
+        String finalChPartyName = chPartyName;
+        oppParty.getOnlineMemberStream().forEach(p -> p.sendMessage(Text.literal("Your party has been challenged to a duel by " + finalChPartyName + "! With a wager of " + wagerInt + " gold! Party leader, use /skirmish accept or /skirmish deny.")));
 
         party.getOnlineMemberStream().forEach(p -> {
             p.sendMessage(Text.literal("§eChallenging §6" + teamName + "§e to a skirmish..."));
